@@ -1,24 +1,36 @@
 import { useChat } from '@ai-sdk/react';
+import { v4 as uuidv4 } from 'uuid';
+import { useEffect, useRef } from 'react';
 
 export default function Chat() {
+  const conversationIdRef = useRef<string>('');
+
+  // Create a stable conversationId once per component mount
+  useEffect(() => {
+    conversationIdRef.current = uuidv4();
+  }, []);
+
   const { messages, input, handleInputChange, handleSubmit } = useChat({
     maxSteps: 5,
+    body: {
+      conversationId: conversationIdRef.current,
+    },
   });
+
   return (
     <div className="flex flex-col w-full max-w-md py-24 mx-auto stretch">
-      {messages.map(message => (
+      {messages.map((message) => (
         <div key={message.id} className="whitespace-pre-wrap">
           {message.role === 'user' ? 'User: ' : 'AI: '}
           {message.parts.map((part, i) => {
-            switch (part.type) {
-              case 'text':
-                return <div key={`${message.id}-${i}`}>{part.text}</div>;
-              case 'tool-invocation':
-                return (
-                  <pre key={`${message.id}-${i}`}>
-                    {JSON.stringify(part.toolInvocation, null, 2)}
-                  </pre>
-                );
+            if (part.type === 'text') {
+              return <div key={`${message.id}-${i}`}>{part.text}</div>;
+            } else if (part.type === 'tool-invocation') {
+              return (
+                <pre key={`${message.id}-${i}`}>
+                  {JSON.stringify(part.toolInvocation, null, 2)}
+                </pre>
+              );
             }
           })}
         </div>
