@@ -1,19 +1,14 @@
-import { CoreMessage } from 'ai';
-import { redis } from './redis';
-
-// export type CoreMessage =
-// | { role: 'user'; content: string }
-// | { role: 'assistant'; content: string }
+import { CoreMessage } from "ai";
+import { redis } from "./redis";
 
 export async function getConversationHistory(
-  conversationId: string
+  conversationId: string,
 ): Promise<CoreMessage[]> {
   const history = await redis.get(conversationId);
-  return Array.isArray(history) && history.every(isCoreMessage)
-    ? history
-    : [];
+  return Array.isArray(history) && history.every(isCoreMessage) ? history : [];
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isCoreMessage(msg: any): msg is CoreMessage {
   return (
     typeof msg === "object" &&
@@ -24,7 +19,7 @@ function isCoreMessage(msg: any): msg is CoreMessage {
 
 export async function saveConversationHistory(
   conversationId: string,
-  messages: CoreMessage[]
+  messages: CoreMessage[],
 ) {
   await redis.set(conversationId, messages);
 }

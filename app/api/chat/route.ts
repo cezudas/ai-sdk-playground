@@ -1,13 +1,7 @@
 // app/api/chat/route.ts
 
 import { openai } from "@ai-sdk/openai";
-import {
-  streamText,
-  StreamData,
-  tool,
-  createDataStreamResponse,
-  CoreMessage,
-} from "ai";
+import { streamText, tool, createDataStreamResponse, CoreMessage } from "ai";
 import { z } from "zod";
 import {
   getConversationHistory,
@@ -15,10 +9,6 @@ import {
 } from "@/lib/conversation-storage";
 
 export const maxDuration = 30;
-
-type ChatState = {
-  messages: CoreMessage[];
-};
 
 const tools = {
   weather: tool({
@@ -73,7 +63,7 @@ export async function POST(req: Request) {
   }
 
   const previousMessages: CoreMessage[] = await getConversationHistory(
-    conversationId
+    conversationId,
   );
 
   console.error("previousMessages", JSON.stringify(previousMessages, null, 2));
@@ -83,25 +73,10 @@ export async function POST(req: Request) {
     model: openai("o3-mini"),
     messages: allMessages,
     tools,
-    async onFinish(result: any) {
+    async onFinish(result: { response?: { messages?: CoreMessage[] } }) {
       const finalMessages = result.response?.messages;
 
       if (finalMessages && Array.isArray(finalMessages)) {
-        const assistantMessages: CoreMessage[] = finalMessages.map(
-          (msg: any) => ({
-            role: msg.role,
-            content:
-              typeof msg.content === "string"
-                ? msg.content
-                : msg.content.map((c: { text: string }) => c.text).join(""),
-          })
-        );
-
-        const userMessages: CoreMessage[] = messages.map((m: any) => ({
-          role: m.role,
-          content: m.content,
-        }));
-
         const lastUserMessage = messages[messages.length - 1];
         const assistantMessage = finalMessages[0]; // usually just one assistant message
 
@@ -114,20 +89,22 @@ export async function POST(req: Request) {
           {
             role: assistantMessage.role,
             content: Array.isArray(assistantMessage.content)
-              ? assistantMessage.content.map((c) => c.text).join("")
+              ? (assistantMessage.content as { text: string }[])
+                  .map((c) => c.text)
+                  .join("")
               : assistantMessage.content,
           },
         ];
 
         console.error(
           "✅ Saving full conversation:",
-          JSON.stringify(updatedHistory, null, 2)
+          JSON.stringify(updatedHistory, null, 2),
         );
 
         await saveConversationHistory(conversationId, updatedHistory);
       } else {
         console.warn(
-          "⚠️ No assistant messages found in result.response.messages"
+          "⚠️ No assistant messages found in result.response.messages",
         );
       }
     },
